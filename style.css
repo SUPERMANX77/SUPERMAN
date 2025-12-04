@@ -102,3 +102,20 @@ h1 {
   font-weight: bold;
   color: #ffdd55;
 }
+
+.chart-section {
+  margin-top: 24px;
+}
+
+.chart-section h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+#chartCanvas {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #333;
+  background: #000;
+  display: block;
+}

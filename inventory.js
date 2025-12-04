@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const calcBtn = document.getElementById('calcBtn');
   const totalShortageValue = document.getElementById('totalShortageValue');
   const saveBtn = document.getElementById('saveBtn');
+  const chartCanvas = document.getElementById('chartCanvas');
+  const chartCtx =
+    chartCanvas instanceof HTMLCanvasElement ? chartCanvas.getContext('2d') : null;
 
   function parseNumber(value) {
     const n = parseFloat(value);
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
       totalShortage += calculateRow(tr);
     });
     totalShortageValue.textContent = String(totalShortage);
+    drawChart();
   }
 
   function addRow() {
@@ -65,6 +69,130 @@ document.addEventListener('DOMContentLoaded', () => {
       items.push({ name, stock, required });
     });
     return items;
+  }
+
+  function getChartData() {
+    const labels = [];
+    const stocks = [];
+    const requireds = [];
+    const shortages = [];
+    let maxValue = 0;
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((tr, index) => {
+      const nameInput = tr.querySelector('.product-name');
+      const stockInput = tr.querySelector('.stock');
+      const requiredInput = tr.querySelector('.required');
+      const shortageCell = tr.querySelector('.shortage-cell');
+
+      const name = nameInput instanceof HTMLInputElement ? nameInput.value.trim() : '';
+      const stock = stockInput instanceof HTMLInputElement ? parseNumber(stockInput.value) : 0;
+      const required =
+        requiredInput instanceof HTMLInputElement ? parseNumber(requiredInput.value) : 0;
+      const shortage =
+        shortageCell instanceof HTMLElement ? parseNumber(shortageCell.textContent || '0') : 0;
+
+      if (!name && stock === 0 && required === 0 && shortage === 0) {
+        return;
+      }
+
+      labels.push(name || `#${index + 1}`);
+      stocks.push(stock);
+      requireds.push(required);
+      shortages.push(shortage);
+      maxValue = Math.max(maxValue, stock, required, shortage);
+    });
+
+    return { labels, stocks, requireds, shortages, maxValue };
+  }
+
+  function drawChart() {
+    if (!chartCtx || !(chartCanvas instanceof HTMLCanvasElement)) return;
+
+    const { labels, stocks, requireds, shortages, maxValue } = getChartData();
+    const ctx = chartCtx;
+    const width = chartCanvas.width;
+    const height = chartCanvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    if (labels.length === 0 || maxValue === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('표에 데이터를 입력하면 그래프가 표시됩니다.', width / 2, height / 2);
+      ctx.textAlign = 'start';
+      return;
+    }
+
+    const margin = { top: 28, right: 20, bottom: 60, left: 40 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+
+    const maxVal = maxValue <= 0 ? 1 : maxValue;
+
+    ctx.strokeStyle = '#555';
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotHeight);
+    ctx.lineTo(margin.left + plotWidth, margin.top + plotHeight);
+    ctx.stroke();
+
+    const groupWidth = plotWidth / labels.length;
+    const barWidth = groupWidth / 4;
+    const baseY = margin.top + plotHeight;
+
+    labels.forEach((label, i) => {
+      const stockVal = stocks[i] || 0;
+      const requiredVal = requireds[i] || 0;
+      const shortageVal = shortages[i] || 0;
+
+      const stockHeight = (stockVal / maxVal) * plotHeight;
+      const requiredHeight = (requiredVal / maxVal) * plotHeight;
+      const shortageHeight = (shortageVal / maxVal) * plotHeight;
+
+      const groupX = margin.left + i * groupWidth;
+      const x1 = groupX + barWidth * 0.5;
+      const x2 = groupX + barWidth * 1.7;
+      const x3 = groupX + barWidth * 2.9;
+
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(x1, baseY - stockHeight, barWidth, stockHeight);
+
+      ctx.fillStyle = '#2196f3';
+      ctx.fillRect(x2, baseY - requiredHeight, barWidth, requiredHeight);
+
+      ctx.fillStyle = '#ff5722';
+      ctx.fillRect(x3, baseY - shortageHeight, barWidth, shortageHeight);
+
+      ctx.fillStyle = '#dddddd';
+      ctx.font = '11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, groupX + groupWidth / 2, baseY + 14);
+    });
+
+    ctx.textAlign = 'left';
+    ctx.font = '11px Arial';
+
+    const legendX = margin.left + 4;
+    let legendY = 14;
+
+    ctx.fillStyle = '#4caf50';
+    ctx.fillRect(legendX, legendY - 8, 10, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('재고', legendX + 16, legendY);
+
+    legendY += 14;
+    ctx.fillStyle = '#2196f3';
+    ctx.fillRect(legendX, legendY - 8, 10, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('소요량', legendX + 16, legendY);
+
+    legendY += 14;
+    ctx.fillStyle = '#ff5722';
+    ctx.fillRect(legendX, legendY - 8, 10, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('부족분', legendX + 16, legendY);
   }
 
   async function loadFromServer() {
@@ -169,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
       totalShortageValue.textContent = String(totalShortage);
+      drawChart();
     }
   }
 
