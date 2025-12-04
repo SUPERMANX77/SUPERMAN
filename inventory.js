@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addRowBtn = document.getElementById('addRowBtn');
   const calcBtn = document.getElementById('calcBtn');
   const totalShortageValue = document.getElementById('totalShortageValue');
+  const saveBtn = document.getElementById('saveBtn');
 
   function parseNumber(value) {
     const n = parseFloat(value);
@@ -42,6 +43,87 @@ document.addEventListener('DOMContentLoaded', () => {
       <td><button type="button" class="remove-row">삭제</button></td>
     `;
     tbody.appendChild(tr);
+  }
+
+  function collectItems() {
+    const items = [];
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((tr) => {
+      const nameInput = tr.querySelector('.product-name');
+      const stockInput = tr.querySelector('.stock');
+      const requiredInput = tr.querySelector('.required');
+
+      const name = nameInput instanceof HTMLInputElement ? nameInput.value.trim() : '';
+      const stock = stockInput instanceof HTMLInputElement ? parseNumber(stockInput.value) : 0;
+      const required =
+        requiredInput instanceof HTMLInputElement ? parseNumber(requiredInput.value) : 0;
+
+      if (!name && stock === 0 && required === 0) {
+        return;
+      }
+
+      items.push({ name, stock, required });
+    });
+    return items;
+  }
+
+  async function loadFromServer() {
+    try {
+      const response = await fetch('/api/inventory');
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        calculateAll();
+        return;
+      }
+
+      tbody.innerHTML = '';
+      data.forEach((item) => {
+        const tr = document.createElement('tr');
+        const name = item.product_name || '';
+        const stock = typeof item.stock === 'number' ? item.stock : 0;
+        const required = typeof item.required === 'number' ? item.required : 0;
+        const shortage = typeof item.shortage === 'number' ? item.shortage : 0;
+
+        tr.innerHTML = `
+          <td><input type="text" class="product-name" placeholder="예: A제품" value="${name}" /></td>
+          <td><input type="number" class="stock" min="0" value="${stock}" /></td>
+          <td><input type="number" class="required" min="0" value="${required}" /></td>
+          <td class="shortage-cell">${shortage}</td>
+          <td><button type="button" class="remove-row">삭제</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      calculateAll();
+    } catch (err) {
+      console.error('Failed to load inventory from server', err);
+    }
+  }
+
+  async function saveToServer() {
+    const items = collectItems();
+    try {
+      const response = await fetch('/api/inventory/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save inventory', await response.text());
+        alert('저장에 실패했습니다.');
+        return;
+      }
+
+      alert('DB에 저장되었습니다.');
+    } catch (err) {
+      console.error('Error saving inventory', err);
+      alert('저장 중 오류가 발생했습니다.');
+    }
   }
 
   function handleTableClick(e) {
@@ -98,6 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateAll();
   });
 
+  if (saveBtn instanceof HTMLButtonElement) {
+    saveBtn.addEventListener('click', () => {
+      saveToServer();
+    });
+  }
+
   tbody.addEventListener('click', handleTableClick);
   tbody.addEventListener('input', handleInputChange);
+
+  loadFromServer();
 });
