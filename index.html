@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>제품별 재고 부족분 계산</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <h1>제품별 재고 부족분 계산</h1>
+    <p class="description">제품명, 기초 재고, 소요량을 입력하면 부족분을 자동으로 계산합니다.</p>
+    <div class="controls">
+      <button type="button" id="addRowBtn">행 추가</button>
+      <button type="button" id="calcBtn">부족분 계산</button>
+    </div>
+    <table class="inventory-table">
+      <thead>
+        <tr>
+          <th>제품명</th>
+          <th>기초 재고</th>
+          <th>소요량</th>
+          <th>부족분</th>
+          <th>삭제</th>
+        </tr>
+      </thead>
+      <tbody id="productBody">
+        <tr>
+          <td><input type="text" class="product-name" placeholder="예: A제품" /></td>
+          <td><input type="number" class="stock" min="0" value="0" /></td>
+          <td><input type="number" class="required" min="0" value="0" /></td>
+          <td class="shortage-cell">0</td>
+          <td><button type="button" class="remove-row">삭제</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="summary">
+      <span id="totalShortageLabel">총 부족량: </span>
+      <span id="totalShortageValue">0</span>
+    </div>
+  </div>
+  <script src="inventory.js"></script>
+</body>
+</html>
